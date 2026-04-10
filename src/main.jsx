@@ -6,7 +6,7 @@ import "./index.css";
 import { BrowserRouter } from "react-router-dom";
 
 import { AuthProvider } from "./context/AuthContext"; // ✅ global auth provider
-import Stairs from "./components/common/stairs.jsx";
+import Stairs from "./components/common/Stairs.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
