@@ -65,9 +65,22 @@ const NavItem = ({ item, navigate, setIsOpen }) => {
       onMouseLeave={handleMouseLeave}
       onClick={(e) => {
         e.stopPropagation();
-        navigate(item.path);
         setIsOpen(false);
         setShowMarquee(false);
+
+        // 🔥 THE AUTHENTICATION INTERCEPTOR
+        if (item.name === "THE LEDGER") {
+          // Check local storage for the auth token (change "token" if you named it differently)
+          const isLoggedIn = localStorage.getItem("token"); 
+          if (isLoggedIn) {
+            navigate("/dashboard");
+          } else {
+            navigate("/login");
+          }
+        } else {
+          // Standard routing for everything else
+          navigate(item.path);
+        }
       }}
     >
       {/* BASE TEXT */}
@@ -157,12 +170,10 @@ const Navbar = () => {
           
           <div className="navTop relative flex justify-between items-center px-10 md:px-30 py-3 text-white">
             
-            {/* 🔥 FIX: Added onClick to close tray when Logo is clicked */}
             <div className="relative z-10 cursor-pointer" onClick={() => setIsOpen(false)}>
               <LogoNav />
             </div>
 
-            {/* Menu Button - Already toggles correctly */}
             <div
               onClick={() => setIsOpen(!isOpen)}
               className="menu absolute left-1/2 -translate-x-1/2 cursor-pointer flex flex-col items-center z-10"
@@ -173,7 +184,6 @@ const Navbar = () => {
               </span>
             </div>
 
-            {/* 🔥 FIX: Added onClick to close tray when NavLastBtn is clicked */}
             <div className="relative z-10 cursor-pointer" onClick={() => setIsOpen(false)}>
               <NavLastBtn />
             </div>
