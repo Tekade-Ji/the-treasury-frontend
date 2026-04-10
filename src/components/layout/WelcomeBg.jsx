@@ -41,20 +41,20 @@ export default function AnimatedBackground({ children, showHero = true }) {
   // them down the ENTIRE absolute height of the page using percentages.
   useEffect(() => {
     const blobColors = [
-      "bg-purple-600/20",
-      "bg-pink-600/20",
-      "bg-blue-500/10",
-      "bg-cyan-400/10",
-      "bg-yellow-400/10",
-    ];
+    "bg-cyan-500/10",   // Electric Cyan
+    "bg-blue-600/15",   // Deep Electric Blue
+    "bg-cyan-400/10",   // Soft Cyan Glow
+    "bg-blue-400/10",   // Sky Blue Neon
+    "bg-indigo-500/10", // Deep Cold Blue
+  ];
 
-    const blobs = Array.from({ length: 25 }).map((_, i) => ({
-      size: Math.random() * 30 + 20, // Random size between 20vw and 50vw
-      top: Math.random() * 100,      // Placed anywhere from 0% (top) to 100% (bottom)
-      left: Math.random() * 100,
-      color: blobColors[Math.floor(Math.random() * blobColors.length)],
-      id: i,
-    }));
+  const blobs = Array.from({ length: 25 }).map((_, i) => ({
+    size: Math.random() * 30 + 20, 
+    top: Math.random() * 100,      
+    left: Math.random() * 100,
+    color: blobColors[Math.floor(Math.random() * blobColors.length)],
+    id: i,
+  }));
 
     setRandomBlobs(blobs);
   }, []);
