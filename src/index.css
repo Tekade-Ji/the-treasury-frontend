@@ -1,0 +1,267 @@
+/* 🔥 IMPORTS */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* 🔥 GLOBAL FONT (applies to everything) */
+*{
+   font-family: 'Poppins';
+}
+
+/* Apply global styles */
+* {
+  user-select: text; /* Allow text selection globally */
+}
+
+/* Customize the selection color */
+::selection {
+  background-color: #DA170E; /* Your desired selection background color */
+  color: black; /* Change text color to black when selected */
+}
+
+/* For WebKit-based browsers (Chrome, Safari, etc.) */
+::-webkit-selection {
+  background-color: #DA170E;
+  color: black;
+}
+
+/* For Firefox */
+::-moz-selection {
+  background-color: #DA170E;
+  color: black;
+}
+
+
+
+/* 🔥 CUSTOM FONTS (for future use like logo branding) */
+@font-face {
+  font-family: 'Font1';
+  src: url(fonts/Stentiga.otf);
+}
+
+@font-face {
+  font-family: 'Font2';
+  src: url(/fonts/Lausanne-300.woff2);
+}
+
+@font-face {
+  font-family: 'Font3';
+  src: url(/fonts/Lausanne-300.woff2);
+}
+
+@font-face {
+  font-family: 'Font4';
+  src: url(/fonts/Lausanne-500.woff2);
+}
+
+/* 🔥 FALLBACK BACKGROUND */
+body {
+  background-color: black;
+  
+}
+
+/* ================= TEXT ANIMATION ================= */
+
+/* 🔹 Container for animated text */
+.text {
+  display: inline-flex;   /* keeps letters in one line */
+  overflow: hidden;       /* hides extra moving text */
+  cursor: pointer;
+}
+
+/* 🔹 Reset default h3 spacing (VERY IMPORTANT) */
+.text h3 {
+  margin: 0;              /* removes default margin */
+  line-height: 1;         /* makes 1em animation perfect */
+  display: flex;
+}
+
+/* 🔥 Each letter */
+.text h3 span {
+  display: inline-block;  /* required for transform */
+  line-height: 1;
+
+  /* smooth animation */
+  transition: transform 0.6s cubic-bezier(0.625, 0.05, 0, 1), color 0.2s;
+
+  /* stagger effect (each letter delayed) */
+  transition-delay: calc(var(--i) * 60ms);
+
+  /* 🔥 MAGIC: creates duplicate text below */
+  text-shadow: currentColor 0px 1em;
+
+  transform: translateY(0); /* initial position */
+
+  will-change: transform;   /* performance optimization */
+}
+
+/* 🔥 Hover: move letters up */
+.text:hover span {
+  transform: translateY(-1em);
+}
+
+/* 🔥 Change color on hover */
+.text:hover span {
+  color: #FD321C;
+}
+
+/* ================= NAVBAR (EXPANDING) ================= */
+
+.navMorph {
+  position: fixed;
+   transform: translateZ(0); /* fixes GPU stacking */
+  top: 0;
+  left: 0;
+  width: 100%;
+
+  z-index: 999999; /* 🔥 increase massively */
+
+  backdrop-filter: blur(10px);
+  background: transparent;
+
+  height: 50px; /* 🔹 closed state */
+  overflow: hidden;
+
+  transition: height 0.5s cubic-bezier(0.625, 0.05, 0, 1);
+
+}
+
+/* 🔥 OPEN STATE */
+.navMorph.open {
+  height: 40vh; /* adjust as needed */
+}
+
+/* 🔹 top section */
+.navTop {
+  height: 50px;
+}
+
+.navprofile img {
+  transition: transform 0.3s ease;
+}
+
+.navprofile:hover img {
+  transform: scale(1.1);
+}
+
+
+/* ================= MENU CONTENT ================= */
+
+.navMenu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 8px;
+  color: white;
+
+  opacity: 0;
+  transform: translateY(-20px);
+
+  transition: all 0.4s ease;
+}
+
+/* 🔥 when open */
+.navMorph.open .navMenu {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 🔹 adjust font */
+.navMenu .text h3 span {
+  font-size: 42px;
+  font-weight: 700;
+}
+
+/* ================= MENU BUTTON ================= */
+
+.menuBar {
+  transition: width 0.4s cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+.menu:hover .menuBar {
+  width: 200px;
+}
+
+.navBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+
+  z-index: 998; /* below navbar */
+}
+
+
+
+/* Swiper js */
+.swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.swiper-slide {
+  justify-self: center;
+  text-align: center;
+  font-size: 18px;
+  background: #444;
+
+  /* Center slide text vertically */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.swiper-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.imgWrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.rotate {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  width: 100vh;   /* THIS is the key */
+  height: auto;
+
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+
+/* Dashboard */
+
+@layer utilities {
+  .animate-spin-slow {
+    animation: spin 20s linear infinite;
+  }
+}
+
+/* Hide scrollbar but keep scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE & Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+/* ProfessionalBg.css or global CSS */
+.professional-bg {
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(160deg, #0a0a0a, #111827);
+}
