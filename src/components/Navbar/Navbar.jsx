@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import LogoNav from "./LogoNav";
 import NavLastBtn from "./NavLastBtn";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext"; // 🔥 ADDED AUTH CONTEXT
 
 // ============================================================================
 // 1. MARQUEE DATA ARCHITECTURE
@@ -43,7 +44,7 @@ const CyberStar = () => (
 // ============================================================================
 // 3. INDIVIDUAL NAV ITEM
 // ============================================================================
-const NavItem = ({ item, navigate, setIsOpen }) => {
+const NavItem = ({ item, navigate, setIsOpen, user }) => { // 🔥 ADDED user PROP
   const [showMarquee, setShowMarquee] = useState(false);
   const timerRef = useRef(null);
 
@@ -68,14 +69,14 @@ const NavItem = ({ item, navigate, setIsOpen }) => {
         setIsOpen(false);
         setShowMarquee(false);
 
-        // 🔥 THE AUTHENTICATION INTERCEPTOR
+        // 🔥 THE AUTHENTICATION INTERCEPTOR (MATCHES YOUR WALLET LOGIC)
         if (item.name === "THE LEDGER") {
-          // Check local storage for the auth token (change "token" if you named it differently)
-          const isLoggedIn = localStorage.getItem("token"); 
-          if (isLoggedIn) {
-            navigate("/dashboard");
+          if (!user || !user.token) {
+            // Not logged in -> send to login, remember they wanted to go to dashboard
+            navigate("/login", { state: { from: "/dashboard" } });
           } else {
-            navigate("/login");
+            // Logged in -> send straight to the vault
+            navigate("/dashboard");
           }
         } else {
           // Standard routing for everything else
@@ -125,6 +126,7 @@ const NavItem = ({ item, navigate, setIsOpen }) => {
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth(); // 🔥 GRAB USER STATE FROM CONTEXT
 
   useEffect(() => {
     if (isOpen) {
@@ -197,6 +199,7 @@ const Navbar = () => {
                 item={item} 
                 navigate={navigate} 
                 setIsOpen={setIsOpen} 
+                user={user} // 🔥 PASS USER DOWN TO NAV ITEM
               />
             ))}
           </div>
