@@ -1,4 +1,4 @@
-import Navbar from "./components/navbar/Navbar";
+import Navbar from "./components/Navbar/Navbar";
 import Home from "./Pages/Home";
 import Dashboard from "./Pages/Dashboard";
 import AnimatedLayout from "./components/layout/AnimatedLayout";
