@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// Math constants pre-calculated to save CPU cycles inside the 60fps loop
-const TWO_PI = Math.PI * 2;
-const HALF_PI = Math.PI / 2;
-
 const Cyberpunk404 = () => {
+  // ==========================================
+  // 1. THE MEMORY SYSTEM
+  // ==========================================
   const canvasRef = useRef(null);
   const audioCtxRef = useRef(null);
   
@@ -15,10 +14,8 @@ const Cyberpunk404 = () => {
     lastLevel: 0,
     score: 0,
     kills: 0,
-    // [TWEAK HERE: MAX LIVES] Change '3' to start with more lives.
     lives: 3,
     energy: 0, 
-    // [TWEAK HERE: PLAYER SPEED] Change 'speed: 14' to make the ship faster/slower.
     player: { x: 0, y: 0, w: 40, h: 40, speed: 14, hitTime: 0, angle: 0 }, 
     bullets: [],       
     squadBullets: [],  
@@ -38,6 +35,9 @@ const Cyberpunk404 = () => {
     lastBossFire: 0    
   });
 
+  // ==========================================
+  // 2. THE SOUND ENGINE 
+  // ==========================================
   const initAudio = () => {
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -129,6 +129,9 @@ const Cyberpunk404 = () => {
     osc.start(); osc.stop(ctx.currentTime + 3.0);
   };
 
+  // ==========================================
+  // 3. MAIN GAME SETUP & LIFECYCLE
+  // ==========================================
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d'); 
@@ -151,12 +154,10 @@ const Cyberpunk404 = () => {
       g.galaxy = [];
       const numArms = 2; 
       const hueBase = 280 + (level * 40); 
-      
       const maxDist = Math.min(window.innerWidth, window.innerHeight) * 0.45; 
 
       for (let i = 0; i < 1200; i++) { 
         const isSpiral = i < 800; 
-        
         let angle, dist, scatterX, scatterY, hueOffset, speed, size;
 
         if (isSpiral) {
@@ -168,15 +169,14 @@ const Cyberpunk404 = () => {
            scatterY = (Math.random() - 0.5) * 15;
            hueOffset = 15 + (Math.random() * 10 - 5); 
            speed = 0; 
-           size = Math.random() * 1.5 + 0.5; // Standard spiral star size
+           size = Math.random() * 1.5 + 0.5; 
         } else {
            dist = 50 + Math.random() * (maxDist - 50); 
-           angle = Math.random() * TWO_PI; 
+           angle = Math.random() * (Math.PI * 2); 
            scatterX = 0; 
            scatterY = 0;
            hueOffset = -15 + (Math.random() * 10 - 5); 
            speed = (Math.random() - 0.5) * 0.0005; 
-           // OPTIMIZATION: Bigger ambient dust chunks fill the void without needing extra CPU rendering
            size = Math.random() * 3.0 + 1.0; 
         }
 
@@ -221,6 +221,7 @@ const Cyberpunk404 = () => {
     window.addEventListener('resize', resize);
     resize();
 
+    // --- DESKTOP CONTROLS ---
     const handleKey = (e, isDown) => { 
       initAudio(); 
       game.current.keys[e.key.toLowerCase()] = isDown; 
@@ -241,13 +242,38 @@ const Cyberpunk404 = () => {
     window.addEventListener('mouseup', (e) => handleMouseBtn(e, false));
     window.addEventListener('contextmenu', handleContextMenu);
 
+    // --- MOBILE TOUCH CONTROLS ---
+    // Attached strictly to the canvas so it doesn't break React UI buttons (like the Strike button)
+    const handleTouchStart = (e) => {
+      e.preventDefault(); // Stop scrolling/zooming
+      initAudio();
+      game.current.mouse.x = e.touches[0].clientX;
+      game.current.mouse.isDown = true; // Auto-fires
+      game.current.mouse.active = true;
+    };
+    const handleTouchMove = (e) => {
+      e.preventDefault();
+      game.current.mouse.x = e.touches[0].clientX; // Drags the ship
+    };
+    const handleTouchEnd = (e) => {
+      e.preventDefault();
+      // Only stop firing if all fingers are off the canvas
+      if (e.touches.length === 0) {
+         game.current.mouse.isDown = false;
+         game.current.mouse.active = false;
+      }
+    };
+
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
     const spawnBoss = () => {
       const g = game.current;
       g.boss = { 
         x: canvas.width / 2 - 75, y: -100, w: 150, h: 90, 
-        // [TWEAK HERE: BOSS HEALTH] Multiplier per wave. Lower for easier bosses.
         hp: 200 + (g.level * 100), maxHp: 200 + (g.level * 100), 
-        // [TWEAK HERE: BOSS SPEED] Horizontal drift speed.
         dx: 3 + (g.level * 0.4), targetY: 50 
       };
     };
@@ -269,7 +295,6 @@ const Cyberpunk404 = () => {
       // --- THE CINEMATIC LOGIC ---
       if (g.cinematic.active) {
         const elapsed = time - g.cinematic.startTime;
-        
         const planetX = canvas.width * 0.7; 
         const planetY = canvas.height * 0.6; 
         const attackPosX = canvas.width * 0.3; 
@@ -277,14 +302,14 @@ const Cyberpunk404 = () => {
         const startPosX = canvas.width / 2 - 20; 
         const startPosY = canvas.height - 80;
 
-        const angleToPlanet = Math.atan2(planetY - g.player.y, planetX - g.player.x) + HALF_PI;
+        const angleToPlanet = Math.atan2(planetY - g.player.y, planetX - g.player.x) + (Math.PI / 2);
 
         if (elapsed < 500) {
            g.cinematic.phase = 'TRANSITION';
            g.cinematic.textY = -100; 
            g.player.x = -100;
            g.player.y = -100;
-           g.player.angle = HALF_PI; 
+           g.player.angle = Math.PI/2; 
         }
         else if (elapsed >= 500 && elapsed < 3500) {
            g.cinematic.phase = 'APPROACH';
@@ -342,11 +367,7 @@ const Cyberpunk404 = () => {
         return; 
       }
 
-      // [TWEAK HERE: GOD MODE / INVINCIBILITY]
-      // To make yourself permanently invincible, change this line to: const isInvulnerable = true;
       const isInvulnerable = time - g.player.hitTime < 1500; 
-
-      // [TWEAK HERE: ENERGY RECHARGE RATE] Change 0.15 to a higher number to recharge the special attack faster
       g.energy = Math.min(100, g.energy + 0.15);
 
       if (g.reinforcements.active) {
@@ -372,7 +393,6 @@ const Cyberpunk404 = () => {
                    });
                    if(Math.random() > 0.5) playLaser(); 
                }
-               // [TWEAK HERE: REINFORCEMENT DURATION] Change 180 (frames) to adjust how long edge-ships stay on screen
                if (g.reinforcements.timer > 180) s.state = 'EXIT';
                allExited = false;
             } else if (s.state === 'EXIT') {
@@ -387,6 +407,7 @@ const Cyberpunk404 = () => {
          if (allExited) g.reinforcements.active = false; 
       }
 
+      // Capture 'control' key from keyboard OR the mobile HUD button
       if (g.keys['control'] && g.energy >= 100) {
         g.energy = 0; 
         playSquadronStrike(); 
@@ -431,30 +452,23 @@ const Cyberpunk404 = () => {
       if (g.mouse.active && g.mouse.x !== null) g.player.x += (g.mouse.x - g.player.w / 2 - g.player.x) * 0.2;
       g.player.x = Math.max(0, Math.min(canvas.width - g.player.w, g.player.x));
 
-      // [TWEAK HERE: PLAYER FIRE RATE] Change 100ms to a lower number (like 50) to shoot faster.
       if ((g.keys[' '] || g.mouse.isDown) && time - g.lastFire > 100) {
-        // [TWEAK HERE: PLAYER BULLET SPEED] Speed locked at 11 as requested. Change 11 to alter velocity.
         g.bullets.push({ x: g.player.x + 8, y: g.player.y, w: 3, h: 15, speed: 11 }); 
         g.bullets.push({ x: g.player.x + g.player.w - 11, y: g.player.y, w: 3, h: 15, speed: 11 });
         playLaser(); 
         g.lastFire = time;
       }
 
-      // [TWEAK HERE: ENEMY SPAWN DENSITY] 
-      // 0.025 is the base chance to spawn an enemy per frame. Increase it for Bullet Hell mode.
-      // `15 + g.level` is the Max Enemies allowed on screen at once.
       if (!g.boss && Math.random() < 0.025 + (g.level * 0.003) && g.enemies.length < 15 + g.level) {
         g.enemies.push({
           x: Math.random() * (canvas.width - 30),
           y: -30, w: 30, h: 20,
-          // [TWEAK HERE: ENEMY SPEED] Fall speed
           speed: 2.5 + Math.random() * g.level * 0.4,
-          offset: Math.random() * TWO_PI,
+          offset: Math.random() * (Math.PI * 2),
           hp: 1
         });
       }
 
-      // [TWEAK HERE: BOSS SPAWN REQUIREMENT] Change 40 to require more/less kills to trigger the boss
       if (!g.boss && g.kills > 0 && g.kills % 40 === 0) {
         spawnBoss();
         g.kills++; 
@@ -467,7 +481,6 @@ const Cyberpunk404 = () => {
 
         let hit = false;
         if (g.boss && b.x > g.boss.x && b.x < g.boss.x + g.boss.w && b.y > g.boss.y && b.y < g.boss.y + g.boss.h) {
-          // [TWEAK HERE: PLAYER DAMAGE VS BOSS] Change '5' to kill boss faster
           g.boss.hp -= 5;
           hit = true;
           g.score += 20;
@@ -478,7 +491,6 @@ const Cyberpunk404 = () => {
               g.score += 100;
               g.kills++;
               
-              // [TWEAK HERE: DROP RATES] 0.04 = 4% chance for Beacon, 0.05 = 5% chance for Heart per kill
               if (Math.random() < 0.04 && !g.reinforcements.active) {
                  g.drops.push({ x: e.x - 5, y: e.y, w: 30, h: 30, speed: 3.5, type: 'BEACON' }); 
               }
@@ -521,9 +533,7 @@ const Cyberpunk404 = () => {
           continue;
         }
 
-        // [TWEAK HERE: ENEMY FIRE RATE] Higher number = Enemies shoot more often
         if (Math.random() < 0.003 * g.level) {
-          // [TWEAK HERE: ENEMY BULLET SPEED]
           g.enemyBullets.push({ x: e.x + e.w / 2, y: e.y + e.h, w: 4, h: 12, speed: 6 });
         }
         
@@ -560,10 +570,10 @@ const Cyberpunk404 = () => {
                  g.reinforcements.ships.push({x: x, y: canvas.height+50, tx: x, ty: canvas.height-30, exitVx: 0, exitVy: 10, angle: 0, state: 'ENTER'});
              }
              for(let y=100; y<canvas.height-100; y+=100) {
-                 g.reinforcements.ships.push({x: -50, y: y, tx: 30, ty: y, exitVx: -10, exitVy: 0, angle: HALF_PI, state: 'ENTER'});
+                 g.reinforcements.ships.push({x: -50, y: y, tx: 30, ty: y, exitVx: -10, exitVy: 0, angle: Math.PI/2, state: 'ENTER'});
              }
              for(let y=100; y<canvas.height-100; y+=100) {
-                 g.reinforcements.ships.push({x: canvas.width+50, y: y, tx: canvas.width-30, ty: y, exitVx: 10, exitVy: 0, angle: -HALF_PI, state: 'ENTER'});
+                 g.reinforcements.ships.push({x: canvas.width+50, y: y, tx: canvas.width-30, ty: y, exitVx: 10, exitVy: 0, angle: -Math.PI/2, state: 'ENTER'});
              }
           }
           g.drops.splice(i, 1);
@@ -588,7 +598,6 @@ const Cyberpunk404 = () => {
           playBossExplosion(); 
           for(let i=0; i<3; i++) g.drops.push({x: canvas.width/2 + (i*50 - 50), y: 100, w: 40, h: 40, speed: 2, type: 'HEAL'});
 
-          // [TWEAK HERE: CINEMATIC TRIGGER] Change '3' to trigger the planet explosion every X waves
           if (g.level % 3 === 0) {
              g.cinematic.active = true;
              g.cinematic.startTime = time; 
@@ -630,7 +639,6 @@ const Cyberpunk404 = () => {
       const g = game.current;
       ctx.clearRect(0, 0, canvas.width, canvas.height); 
 
-      // --- HIGH PERFORMANCE RENDERING ---
       ctx.save();
       ctx.translate(canvas.width / 2, canvas.height / 2); 
       ctx.rotate(time * 0.0001); 
@@ -642,7 +650,7 @@ const Cyberpunk404 = () => {
       ctx.fillRect(-150, -150, 300, 300); 
 
       ctx.beginPath();
-      ctx.arc(0, 0, 35, 0, TWO_PI);
+      ctx.arc(0, 0, 35, 0, Math.PI * 2);
       ctx.fillStyle = '#000';
       ctx.fill();
       ctx.lineWidth = 2;
@@ -654,17 +662,15 @@ const Cyberpunk404 = () => {
         const x = Math.cos(p.angle) * p.dist + p.scatterX;
         const y = Math.sin(p.angle) * p.dist + p.scatterY;
         
-        // Strict exclusion zone: Nothing draws inside the black hole radius
         if (x * x + y * y < 35 * 35) return; 
 
         ctx.fillStyle = `hsl(${g.galaxyHue + p.hueOffset}, ${p.sat}%, ${p.lit}%)`;
         ctx.globalAlpha = Math.max(0.1, 1 - (p.dist / (Math.min(canvas.width, canvas.height) * 0.45))); 
-        ctx.fillRect(x, y, p.size, p.size); // Zero-lag rendering
+        ctx.fillRect(x, y, p.size, p.size);
       });
       ctx.restore(); 
       ctx.globalAlpha = 1.0;
 
-      // --- DRAW THE CUTSCENE ---
       if (g.cinematic.active) {
          const cx = canvas.width / 2; 
          const cy = canvas.height / 3; 
@@ -681,7 +687,7 @@ const Cyberpunk404 = () => {
              planetGrad.addColorStop(1, '#000'); 
 
              ctx.beginPath();
-             ctx.arc(planetX, planetY, planetRadius, 0, TWO_PI);
+             ctx.arc(planetX, planetY, planetRadius, 0, Math.PI * 2);
              ctx.fillStyle = planetGrad;
              ctx.fill();
 
@@ -691,7 +697,7 @@ const Cyberpunk404 = () => {
              ctx.globalAlpha = 0.8;
              g.cinematic.planetConfig.blobs.forEach(blob => {
                 ctx.beginPath();
-                ctx.arc(planetX + blob.x, planetY + blob.y, blob.r, 0, TWO_PI);
+                ctx.arc(planetX + blob.x, planetY + blob.y, blob.r, 0, Math.PI * 2);
                 ctx.fill();
              });
              
@@ -714,14 +720,13 @@ const Cyberpunk404 = () => {
 
          if (g.cinematic.phase === 'CHARGING') {
              ctx.beginPath();
-             ctx.arc(g.player.x + g.player.w/2, g.player.y + g.player.h/2, Math.random() * 40 + 20, 0, TWO_PI);
+             ctx.arc(g.player.x + g.player.w/2, g.player.y + g.player.h/2, Math.random() * 40 + 20, 0, Math.PI*2);
              ctx.fillStyle = g.cinematic.laserColor;
              ctx.shadowBlur = 20; ctx.shadowColor = g.cinematic.laserColor;
              ctx.fill();
              ctx.shadowBlur = 0;
          }
 
-         // The Laser is drawn FIRST so it is UNDERNEATH the ship
          if (g.cinematic.phase === 'FIRING') {
              ctx.fillStyle = g.cinematic.laserColor;
              ctx.shadowBlur = 40;
@@ -767,7 +772,6 @@ const Cyberpunk404 = () => {
              ctx.shadowBlur = 0;
          }
 
-         // The Ship is drawn LAST so it overlays the laser 
          if (playerImg.complete && g.cinematic.phase !== 'TRANSITION') {
              ctx.save();
              ctx.translate(g.player.x + g.player.w/2, g.player.y + g.player.h/2);
@@ -776,7 +780,6 @@ const Cyberpunk404 = () => {
              ctx.restore();
          }
       } 
-      // --- 3. DRAW NORMAL GAME ---
       else {
         const isInvulnerable = time - g.player.hitTime < 1500;
 
@@ -801,7 +804,7 @@ const Cyberpunk404 = () => {
                 ctx.shadowColor = '#fff'; 
                 ctx.save();
                 ctx.translate(b.x, b.y);
-                ctx.rotate(b.angle + HALF_PI);
+                ctx.rotate(b.angle + (Math.PI / 2));
                 ctx.fillRect(-b.w/2, -b.h/2, b.w, b.h);
                 ctx.restore();
             } else {
@@ -872,10 +875,23 @@ const Cyberpunk404 = () => {
       window.removeEventListener('mousedown', handleMouseBtn);
       window.removeEventListener('mouseup', handleMouseBtn);
       window.removeEventListener('contextmenu', handleContextMenu);
+      // Clean up touch events too
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+      canvas.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, []);
 
   const resetGame = () => window.location.reload(); 
+
+  // Mobile Strike Button Handler
+  const handleMobileStrike = (e) => {
+    e.preventDefault();
+    if (uiState.energy >= 100) {
+      game.current.keys['control'] = true;
+    }
+  };
 
   // ==========================================
   // 6. THE HTML UI
@@ -899,30 +915,30 @@ const Cyberpunk404 = () => {
           </h1>
         </div>
 
-        <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-20 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start z-20 pointer-events-none">
           <div className="flex flex-col gap-2">
             <span className="text-cyan-400 font-black tracking-widest text-xl md:text-3xl drop-shadow-[0_0_10px_rgba(0,255,255,0.8)]">SYS.SEC.FINAL</span>
-            <div className="mt-2 w-48 h-4 border-2 border-gray-700 bg-black relative">
+            <div className="mt-2 w-32 md:w-48 h-4 border-2 border-gray-700 bg-black relative">
               <div 
                 className={`h-full transition-all duration-75 ${uiState.energy >= 100 ? 'bg-cyan-400 shadow-[0_0_15px_#0ff] animate-pulse' : 'bg-gray-500'}`} 
                 style={{ width: `${uiState.energy}%` }}
               />
-              <span className="absolute -bottom-5 left-0 text-[10px] text-gray-400 tracking-widest font-bold">
-                {uiState.energy >= 100 ? '[R-CLICK] STRIKE READY' : 'RECHARGING COMMS...'}
+              <span className="absolute -bottom-5 left-0 text-[8px] md:text-[10px] text-gray-400 tracking-widest font-bold whitespace-nowrap">
+                {uiState.energy >= 100 ? '[R-CLICK/TAP] STRIKE READY' : 'RECHARGING COMMS...'}
               </span>
             </div>
           </div>
           
           <div className="flex flex-col items-end gap-3 pointer-events-auto">
-            <a href="/" draggable="false" className="group flex items-center gap-2 px-6 py-2 bg-red-950/80 border-2 border-red-600 text-red-500 hover:bg-red-600 hover:text-black font-black uppercase tracking-[0.2em] transition-all duration-300 shadow-[0_0_15px_rgba(255,0,0,0.5)] hover:shadow-[0_0_30px_rgba(255,0,0,1)] rounded-sm">
-              <span className="text-xl animate-pulse group-hover:animate-none">⚠️</span>
-              Emergency Eject
+            <a href="/" draggable="false" className="group flex items-center gap-2 px-4 py-2 bg-red-950/80 border-2 border-red-600 text-red-500 hover:bg-red-600 hover:text-black font-black uppercase tracking-[0.2em] transition-all duration-300 shadow-[0_0_15px_rgba(255,0,0,0.5)] hover:shadow-[0_0_30px_rgba(255,0,0,1)] rounded-sm text-sm md:text-base">
+              <span className="text-lg md:text-xl animate-pulse group-hover:animate-none">⚠️</span>
+              Eject
             </a>
             
-            <span className="text-pink-500 font-black text-2xl md:text-4xl drop-shadow-[0_0_15px_rgba(255,0,255,0.8)] mt-2">
+            <span className="text-pink-500 font-black text-xl md:text-4xl drop-shadow-[0_0_15px_rgba(255,0,255,0.8)] mt-2">
               SCORE: {uiState.score.toString().padStart(7, '0')}
             </span>
-            <div className="flex gap-6 text-sm md:text-lg font-bold">
+            <div className="flex gap-4 md:gap-6 text-xs md:text-lg font-bold">
               <span className="text-cyan-300 drop-shadow-[0_0_5px_#0ff]">WAVE {uiState.level}</span>
               <span className="text-red-500 tracking-widest">LIVES: {'❤'.repeat(uiState.lives)}</span>
             </div>
@@ -931,15 +947,26 @@ const Cyberpunk404 = () => {
 
         <canvas ref={canvasRef} className="absolute inset-0 z-10 block bg-transparent" />
 
+        {/* MOBILE STRIKE BUTTON */}
+        <div className="absolute bottom-24 right-6 z-30 pointer-events-auto md:hidden">
+            <button 
+               onTouchStart={handleMobileStrike}
+               onClick={handleMobileStrike}
+               className={`w-20 h-20 rounded-full border-4 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 ${uiState.energy >= 100 ? 'border-cyan-400 text-cyan-400 shadow-[0_0_20px_#0ff] animate-pulse' : 'border-gray-700 text-gray-700'}`}
+            >
+               <span className="font-black text-xs">STRIKE</span>
+            </button>
+        </div>
+
         {uiState.mode === 'GAMEOVER' && (
           <div className="absolute inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 text-center pointer-events-auto">
-            <h2 className="text-6xl md:text-8xl text-red-600 font-black mb-4 drop-shadow-[0_0_30px_#f00] tracking-tighter">BREACH DETECTED</h2>
-            <p className="text-2xl text-gray-400 mb-8 font-bold uppercase tracking-[0.4em]">Final Score: <span className="text-pink-500">{uiState.score}</span></p>
-            <div className="flex gap-6">
-              <button draggable="false" onClick={resetGame} className="px-8 py-4 border-2 border-cyan-500 text-cyan-400 hover:bg-cyan-500 hover:text-black hover:shadow-[0_0_30px_#0ff] transition-all duration-300 uppercase tracking-[0.2em] font-black text-xl">
+            <h2 className="text-5xl md:text-8xl text-red-600 font-black mb-4 drop-shadow-[0_0_30px_#f00] tracking-tighter">BREACH DETECTED</h2>
+            <p className="text-xl md:text-2xl text-gray-400 mb-8 font-bold uppercase tracking-[0.4em]">Final Score: <span className="text-pink-500">{uiState.score}</span></p>
+            <div className="flex gap-4 md:gap-6 flex-col md:flex-row">
+              <button draggable="false" onClick={resetGame} className="px-6 py-3 md:px-8 md:py-4 border-2 border-cyan-500 text-cyan-400 hover:bg-cyan-500 hover:text-black hover:shadow-[0_0_30px_#0ff] transition-all duration-300 uppercase tracking-[0.2em] font-black text-lg md:text-xl">
                 Restart Defense
               </button>
-              <a href="/" draggable="false" className="px-8 py-4 border-2 border-red-600 text-red-500 hover:bg-red-600 hover:text-black hover:shadow-[0_0_30px_#f00] transition-all duration-300 uppercase tracking-[0.2em] font-black text-xl flex items-center justify-center">
+              <a href="/" draggable="false" className="px-6 py-3 md:px-8 md:py-4 border-2 border-red-600 text-red-500 hover:bg-red-600 hover:text-black hover:shadow-[0_0_30px_#f00] transition-all duration-300 uppercase tracking-[0.2em] font-black text-lg md:text-xl flex items-center justify-center">
                 Retreat to Base
               </a>
             </div>
@@ -947,8 +974,8 @@ const Cyberpunk404 = () => {
         )}
         
         <div className="absolute bottom-6 left-0 w-full text-center z-20 pointer-events-none opacity-60">
-          <span className="text-cyan-400 text-xs md:text-sm tracking-[0.3em] uppercase font-bold bg-black/70 px-5 py-2 rounded border border-cyan-900/50 shadow-lg">
-            [A/D]/[ARROWS]: Move | [L-CLICK]: Fire | [R-CLICK]: Squadron
+          <span className="text-cyan-400 text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-bold bg-black/70 px-3 py-2 rounded border border-cyan-900/50 shadow-lg inline-block">
+            [TOUCH/DRAG]: Move & Fire | [TAP STRIKE / R-CLICK]: Squadron
           </span>
         </div>
       </div>
