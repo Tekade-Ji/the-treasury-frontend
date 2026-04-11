@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const Cyberpunk404 = () => {
   const canvasRef = useRef(null);
+  const audioCtxRef = useRef(null);
   const [uiState, setUiState] = useState({ mode: 'PLAYING', score: 0, level: 1, lives: 3, energy: 0 });
   
   const game = useRef({
@@ -18,13 +19,135 @@ const Cyberpunk404 = () => {
     enemies: [],
     friendlies: [], 
     drops: [],
-    galaxy: [], // Replaces old static stars
+    galaxy: [], 
     boss: null,
     keys: {},
     mouse: { x: null, isDown: false, active: false },
     lastFire: 0,
     lastBossFire: 0
   });
+
+  // --- Audio Engine ---
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+  };
+
+  const playLaser = () => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.1);
+    
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  };
+
+  const playSquadronStrike = () => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const duration = 2.5;
+    
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+
+    osc1.frequency.setValueAtTime(200, ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + duration);
+    osc2.frequency.setValueAtTime(205, ctx.currentTime);
+    osc2.frequency.exponentialRampToValueAtTime(42, ctx.currentTime + duration);
+
+    gain.gain.setValueAtTime(0.01, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + duration / 2);
+    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start();
+    osc2.start();
+    osc1.stop(ctx.currentTime + duration);
+    osc2.stop(ctx.currentTime + duration);
+  };
+
+  const playHitSound = () => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.2);
+    
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.2);
+  };
+
+  const playHealSound = () => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+    
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  };
+
+  const playBossExplosion = () => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(100, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 1.0);
+    
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.0);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 1.0);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -42,20 +165,18 @@ const Cyberpunk404 = () => {
     const bossImg = buildImg(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><path d="M10 20 L50 0 L90 20 L100 60 L80 50 L50 60 L20 50 L0 60 Z" fill="#f00" stroke="#ffaa00" stroke-width="2"/><circle cx="30" cy="30" r="8" fill="#000"/><circle cx="70" cy="30" r="8" fill="#000"/></svg>`);
     const heartImg = buildImg(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M16 28s-12-8.5-12-16a6 6 0 0 1 12-4 6 6 0 0 1 12 4c0 7.5-12 16-12 16z" fill="#ff0055" stroke="#fff" stroke-width="2"/></svg>`);
 
-    // --- High-Performance Spiral Galaxy Generator ---
     const buildGalaxy = (level) => {
       const g = game.current;
       g.galaxy = [];
-      const numArms = 3 + (level % 4); // Changes structure based on wave
-      const hueBase = level * 65; // Massive color shifts per wave
-      
+      const numArms = 3 + (level % 4); 
+      const hueBase = level * 65; 
       const maxDist = Math.max(window.innerWidth, window.innerHeight);
 
-      for (let i = 0; i < 2500; i++) { // 2500 stars per galaxy
+      for (let i = 0; i < 2500; i++) { 
         const dist = Math.random() * maxDist;
         const armAngle = (i % numArms) * ((Math.PI * 2) / numArms);
-        const spiralTwist = dist * 0.002; // Creates the curved arms
-        const scatter = (Math.random() - 0.5) * (dist * 0.2 + 20); // Thickness of arms
+        const spiralTwist = dist * 0.002; 
+        const scatter = (Math.random() - 0.5) * (dist * 0.2 + 20); 
 
         g.galaxy.push({
           angle: armAngle + spiralTwist,
@@ -64,7 +185,7 @@ const Cyberpunk404 = () => {
           scatterY: (Math.random() - 0.5) * (dist * 0.2 + 20),
           size: Math.random() * 2 + 0.5,
           color: `hsl(${hueBase + (Math.random() * 50 - 25)}, ${70 + Math.random()*30}%, ${50 + Math.random()*50}%)`,
-          speed: 0.0002 + (1 / (dist + 50)) * 0.05 // Core spins faster than edges
+          speed: 0.0002 + (1 / (dist + 50)) * 0.05 
         });
       }
     };
@@ -78,12 +199,15 @@ const Cyberpunk404 = () => {
     window.addEventListener('resize', resize);
     resize();
 
-    // --- Input Handling (Text Selection Nuked) ---
-    const handleKey = (e, isDown) => { game.current.keys[e.key.toLowerCase()] = isDown; };
+    const handleKey = (e, isDown) => { 
+      initAudio();
+      game.current.keys[e.key.toLowerCase()] = isDown; 
+    };
     const handleMouse = (e) => { game.current.mouse.x = e.clientX; game.current.mouse.active = true; };
     
     const handleMouseBtn = (e, isDown) => { 
-      if (isDown) e.preventDefault(); // HARD lock against text selection
+      initAudio();
+      if (isDown) e.preventDefault(); 
       if (e.button === 0) game.current.mouse.isDown = isDown; 
       if (e.button === 2 && isDown) game.current.keys['control'] = true; 
     };
@@ -110,7 +234,6 @@ const Cyberpunk404 = () => {
       const g = game.current;
       if (g.lives <= 0) return;
 
-      // Rebuild galaxy if wave changes
       if (g.level !== g.lastLevel) {
         buildGalaxy(g.level);
         g.lastLevel = g.level;
@@ -121,6 +244,8 @@ const Cyberpunk404 = () => {
 
       if (g.keys['control'] && g.energy >= 100) {
         g.energy = 0;
+        playSquadronStrike(); 
+
         for(let i = 0; i < 12; i++) {
           g.friendlies.push({
             x: Math.random() * canvas.width,
@@ -157,6 +282,7 @@ const Cyberpunk404 = () => {
       if ((g.keys[' '] || g.mouse.isDown) && time - g.lastFire > 120) {
         g.bullets.push({ x: g.player.x + 8, y: g.player.y, w: 3, h: 15, speed: 15 });
         g.bullets.push({ x: g.player.x + g.player.w - 11, y: g.player.y, w: 3, h: 15, speed: 15 });
+        playLaser(); 
         g.lastFire = time;
       }
 
@@ -219,6 +345,7 @@ const Cyberpunk404 = () => {
            g.lives--;
            g.player.hitTime = time; 
            g.enemies.splice(i, 1);
+           playHitSound(); // AUDIO TRIGGER
            if (g.lives <= 0) setUiState({ mode: 'GAMEOVER', score: g.score, level: g.level, lives: 0, energy: g.energy });
         }
       }
@@ -232,6 +359,7 @@ const Cyberpunk404 = () => {
           g.lives = Math.min(g.lives + 1, 5);
           g.score += 500;
           g.drops.splice(i, 1);
+          playHealSound(); // AUDIO TRIGGER
         }
       }
 
@@ -252,6 +380,7 @@ const Cyberpunk404 = () => {
           g.score += 10000;
           g.level++;
           g.boss = null;
+          playBossExplosion(); // AUDIO TRIGGER
           for(let i=0; i<3; i++) g.drops.push({x: canvas.width/2 + (i*50 - 50), y: 100, w: 40, h: 40, speed: 2});
         }
       }
@@ -265,6 +394,7 @@ const Cyberpunk404 = () => {
           g.lives -= 1;
           g.player.hitTime = time; 
           g.enemyBullets.splice(i, 1);
+          playHitSound(); // AUDIO TRIGGER
           if (g.lives <= 0) setUiState({ mode: 'GAMEOVER', score: g.score, level: g.level, lives: 0, energy: g.energy });
         }
       }
@@ -278,13 +408,12 @@ const Cyberpunk404 = () => {
       const g = game.current;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // --- Draw Spiral Galaxy ---
       ctx.save();
       ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate(time * 0.0001); // Slowly rotate the entire galaxy cluster
+      ctx.rotate(time * 0.0001); 
       
       g.galaxy.forEach(p => {
-        p.angle -= p.speed; // Individual stars orbit the center
+        p.angle -= p.speed; 
         const x = Math.cos(p.angle) * p.dist + p.scatterX;
         const y = Math.sin(p.angle) * p.dist + p.scatterY;
         ctx.fillStyle = p.color;
@@ -359,7 +488,6 @@ const Cyberpunk404 = () => {
 
   return (
     <>
-      {/* Absolute CSS lock against text highlighting globally */}
       <style>{`
         * {
           user-select: none !important;
@@ -371,7 +499,6 @@ const Cyberpunk404 = () => {
       
       <div className="h-screen w-screen bg-[#020308] text-green-400 font-mono overflow-hidden relative cursor-crosshair">
         
-        {/* Brightened 404 Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
           <h1 className="text-[35vw] font-black text-transparent bg-clip-text bg-gradient-to-b from-gray-200 to-gray-700 opacity-60 tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
             404
