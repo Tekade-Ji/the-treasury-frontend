@@ -35,7 +35,8 @@ const menuItems = [
 // ============================================================================
 const CyberStar = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" 
-       className="mx-24 md:mx-40 shrink-0 text-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.8)]">
+       // Adjusted mobile margin slightly so it doesn't break small screens
+       className="mx-12 sm:mx-24 md:mx-40 shrink-0 w-4 h-4 sm:w-6 sm:h-6 text-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.8)]">
     <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" fill="currentColor"/>
     <circle cx="12" cy="12" r="3" fill="#050505"/>
   </svg>
@@ -44,7 +45,7 @@ const CyberStar = () => (
 // ============================================================================
 // 3. INDIVIDUAL NAV ITEM
 // ============================================================================
-const NavItem = ({ item, navigate, setIsOpen, user }) => { // 🔥 ADDED user PROP
+const NavItem = ({ item, navigate, setIsOpen, user }) => { 
   const [showMarquee, setShowMarquee] = useState(false);
   const timerRef = useRef(null);
 
@@ -61,7 +62,8 @@ const NavItem = ({ item, navigate, setIsOpen, user }) => { // 🔥 ADDED user PR
 
   return (
     <div
-      className="relative w-full flex justify-center items-center h-16 md:h-20 overflow-hidden cursor-pointer"
+      // Adjusted height for mobile (h-12), desktop remains untouched (md:h-20)
+      className="relative w-full flex justify-center items-center h-12 sm:h-16 md:h-20 overflow-hidden cursor-pointer"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={(e) => {
@@ -69,24 +71,22 @@ const NavItem = ({ item, navigate, setIsOpen, user }) => { // 🔥 ADDED user PR
         setIsOpen(false);
         setShowMarquee(false);
 
-        // 🔥 THE AUTHENTICATION INTERCEPTOR (MATCHES YOUR WALLET LOGIC)
+        // 🔥 THE AUTHENTICATION INTERCEPTOR
         if (item.name === "THE LEDGER") {
           if (!user || !user.token) {
-            // Not logged in -> send to login, remember they wanted to go to dashboard
             navigate("/login", { state: { from: "/dashboard" } });
           } else {
-            // Logged in -> send straight to the vault
             navigate("/dashboard");
           }
         } else {
-          // Standard routing for everything else
           navigate(item.path);
         }
       }}
     >
       {/* BASE TEXT */}
       <div className={`text transition-opacity duration-500 ${showMarquee ? "opacity-0" : "opacity-100"}`}>
-        <h3 className="text-4xl md:text-5xl font-bold">
+        {/* Adjusted text size for mobile (text-3xl), desktop remains (md:text-5xl) */}
+        <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold">
           {item.name.split("").map((letter, i) => (
             <span key={i} style={{ "--i": i }}>
               {letter === " " ? "\u00A0" : letter}
@@ -106,7 +106,8 @@ const NavItem = ({ item, navigate, setIsOpen, user }) => { // 🔥 ADDED user PR
             <React.Fragment key={loopIndex}>
               {item.phrases.map((phrase, phraseIndex) => (
                 <React.Fragment key={phraseIndex}>
-                  <span className="text-2xl md:text-4xl font-black tracking-[0.3em] uppercase text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,0.4)]">
+                  {/* Adjusted marquee text for mobile (text-lg), desktop remains (md:text-4xl) */}
+                  <span className="text-lg sm:text-2xl md:text-4xl font-black tracking-[0.3em] uppercase text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,0.4)]">
                     {phrase}
                   </span>
                   <CyberStar />
@@ -170,7 +171,7 @@ const Navbar = () => {
           }`}
         >
           
-          <div className="navTop relative flex justify-between items-center px-10 md:px-30 py-3 text-white">
+          <div className="navTop relative flex justify-between items-center px-6 sm:px-10 md:px-30 py-3 text-white">
             
             <div className="relative z-10 cursor-pointer" onClick={() => setIsOpen(false)}>
               <LogoNav />
@@ -180,8 +181,9 @@ const Navbar = () => {
               onClick={() => setIsOpen(!isOpen)}
               className="menu absolute left-1/2 -translate-x-1/2 cursor-pointer flex flex-col items-center z-10"
             >
-              <div className="menuBar h-1.5 w-24 md:w-40 bg-white rounded-full transition-all duration-300"></div>
-              <span className="mt-2 text-sm tracking-widest font-semibold uppercase">
+              {/* 🔥 THE SHRINKING BAR FIX: Changes width based on isOpen state */}
+              <div className={`menuBar h-1.5 bg-white rounded-full transition-all duration-300 ${isOpen ? "w-12 md:w-20" : "w-24 md:w-40"}`}></div>
+              <span className="mt-2 text-xs md:text-sm tracking-widest font-semibold uppercase">
                 {isOpen ? "CLOSE" : "MENU"}
               </span>
             </div>
@@ -192,14 +194,15 @@ const Navbar = () => {
             
           </div>
 
-          <div className="navMenu w-full pb-12">
+          {/* Increased bottom padding on mobile (pb-20) to ensure THE CODEX is fully visible above the fade mask */}
+          <div className="navMenu w-full pb-20 md:pb-20">
             {menuItems.map((item, index) => (
               <NavItem 
                 key={index} 
                 item={item} 
                 navigate={navigate} 
                 setIsOpen={setIsOpen} 
-                user={user} // 🔥 PASS USER DOWN TO NAV ITEM
+                user={user} 
               />
             ))}
           </div>
