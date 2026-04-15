@@ -1,11 +1,17 @@
+// React tools: useState for component memory, useEffect for triggers, useCallback for performance optimization.
 import { useState, useEffect, useCallback } from "react";
+// Custom authentication vault.
 import { useAuth } from "../../context/AuthContext";
-import API from "../../api/axios";
 
 const ModifyProduct = ({ product, onClose, onUpdated }) => {
+  // Grab user info to authorize the database update
   const { user } = useAuth();
   const authToken = user?.token || "";
 
+  // -----------------------------
+  // STATE HOOKS (Memory)
+  // -----------------------------
+  // Remembers the text data for the product
   const [editData, setEditData] = useState({
     title: "",
     description: "",
@@ -15,15 +21,23 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
   });
 
   // --- SEPARATED ASSET PIPELINES ---
+  // Thumbnail memory
   const [editThumbnail, setEditThumbnail] = useState(null);
   const [existingThumbnail, setExistingThumbnail] = useState("");
 
+  // Supplemental images memory
   const [editImages, setEditImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
+
+  // 🔥 DRAG AND DROP ENGAGEMENT STATES
+  // These remember if a file is currently hovering directly over the drop zones.
+  const [thumbDrag, setThumbDrag] = useState(false);
+  const [imgDrag, setImgDrag] = useState(false);
 
   // -----------------------------
   // INIT DATA
   // -----------------------------
+  // When the popup opens, fill the boxes with the product's current data
   useEffect(() => {
     if (product) {
       setEditData({
@@ -41,6 +55,7 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
   // -----------------------------
   // HELPER FOR IMAGE RENDER
   // -----------------------------
+  // Figures out the correct URL to display the image properly
   const getImageSrc = (src) => {
     if (!src) return "/placeholder.png";
     if (src.startsWith("http") || src.startsWith("blob:")) return src;
@@ -51,6 +66,7 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
   // -----------------------------
   // EXECUTE UPDATE LOGIC
   // -----------------------------
+  // Packages the new text and files and sends them to the database
   const executeUpdate = useCallback(async () => {
     const formData = new FormData();
     Object.keys(editData).forEach((key) => formData.append(key, editData[key]));
@@ -70,9 +86,9 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
 
       const data = await res.json();
       if (res.ok) {
-        onUpdated(data.data);
-        window.dispatchEvent(new Event("product-updated"));
-        onClose();
+        onUpdated(data.data); // Tell the parent component the data changed
+        window.dispatchEvent(new Event("product-updated")); // Broadcast update to whole app
+        onClose(); // Close the modal
       }
     } catch (err) {
       console.error("Update failed:", err);
@@ -91,12 +107,13 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
   // -----------------------------
   // KEYBOARD BINDINGS
   // -----------------------------
+  // Let users close the popup with Escape or submit with Enter
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         onClose();
       } else if (e.key === "Enter") {
-        // Prevent submission if the user is hitting enter inside the description textarea
+        // Prevent submission if the user is hitting enter inside the description textarea to make a new line
         if (e.target.tagName === "TEXTAREA") return;
 
         e.preventDefault();
@@ -110,14 +127,17 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
 
   if (!product) return null;
 
+  // ==========================================
+  // THE VISUALS (HTML/JSX)
+  // ==========================================
   return (
     <div
       className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 global-cursor-zone"
-      onClick={onClose}
+      onClick={onClose} // Clicking the dark background closes the popup
     >
       <div
         className="bg-gray-950 border border-cyan-500/30 p-6 rounded-2xl w-full max-w-6xl flex flex-col shadow-[0_0_40px_rgba(0,255,255,0.1)]"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()} // Clicking inside the popup prevents it from closing
       >
         {/* HEADER */}
         <h2 className="text-2xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 uppercase tracking-widest border-b border-gray-800 pb-2 shrink-0">
@@ -127,6 +147,7 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
         {/* HIGH DENSITY GRID */}
         <div className="flex-1">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
             {/* COLUMN 1: DATA & TELEMETRY */}
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-white uppercase tracking-widest border-b border-gray-800 pb-1">
@@ -209,6 +230,7 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
+                
                 {/* THUMBNAIL PIPELINE */}
                 <div>
                   <label className="block text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-1">
@@ -218,11 +240,41 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
                     onClick={() =>
                       document.getElementById("thumbnailInput").click()
                     }
-                    className="border-2 border-dashed border-gray-700 hover:border-cyan-400 rounded-lg p-2 text-center !cursor-pointer transition-colors bg-black/50 group h-28 flex items-center justify-center relative"
+                    // 🔥 TRIGGER: Detect when a file enters the airspace of this box
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setThumbDrag(true); // Turn on the glow
+                    }}
+                    // 🔥 TRIGGER: Detect when the file leaves the airspace
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setThumbDrag(false); // Turn off the glow
+                    }}
+                    // 🔥 TRIGGER: Detect the drop
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setThumbDrag(false); // Turn off the glow
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        setEditThumbnail(e.dataTransfer.files[0]);
+                      }
+                    }}
+                    // Dynamic styling: If thumbDrag is true, glow cyan and add a subtle background tint. Otherwise, keep the standard look.
+                    className={`border-2 border-dashed rounded-lg p-2 text-center !cursor-pointer transition-all duration-300 group h-28 flex items-center justify-center relative ${
+                      thumbDrag
+                        ? "border-cyan-400 shadow-[0_0_20px_rgba(0,255,255,0.4)] bg-cyan-400/10"
+                        : "border-gray-700 hover:border-cyan-400 bg-black/50"
+                    }`}
                   >
-                    {/* Added pointer-events-none to the children so they don't block the cursor */}
                     <div className="pointer-events-none h-full w-full flex items-center justify-center">
-                      {editThumbnail || existingThumbnail ? (
+                      
+                      {/* Visual Feedback Logic */}
+                      {thumbDrag ? (
+                        // 1. If currently dragging a file over the box, show an engaging instruction
+                        <p className="text-xs text-cyan-400 font-bold uppercase tracking-widest animate-pulse">
+                          Drop to Engage
+                        </p>
+                      ) : editThumbnail || existingThumbnail ? (
+                        // 2. If an image exists and we are not dragging, show the image
                         <img
                           src={
                             editThumbnail
@@ -233,11 +285,13 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
                           alt="Thumbnail"
                         />
                       ) : (
+                        // 3. If empty, show standard placeholder text
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider">
                           Upload Thumbnail
                         </p>
                       )}
                     </div>
+
                     <input
                       type="file"
                       id="thumbnailInput"
@@ -260,12 +314,45 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
                     onClick={() =>
                       document.getElementById("imagesInput").click()
                     }
-                    className="border-2 border-dashed border-gray-700 hover:border-purple-400 rounded-lg p-2 text-center !cursor-pointer transition-colors bg-black/50 h-28 flex items-center justify-center"
+                    // 🔥 TRIGGER: Detect drag enter
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setImgDrag(true);
+                    }}
+                    // 🔥 TRIGGER: Detect drag leave
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setImgDrag(false);
+                    }}
+                    // 🔥 TRIGGER: Detect drop
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setImgDrag(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length) {
+                        setEditImages((prev) => [
+                          ...prev,
+                          ...Array.from(e.dataTransfer.files),
+                        ]);
+                      }
+                    }}
+                    // Dynamic styling: If imgDrag is true, glow purple.
+                    className={`border-2 border-dashed rounded-lg p-2 text-center !cursor-pointer transition-all duration-300 h-28 flex items-center justify-center ${
+                      imgDrag
+                        ? "border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.4)] bg-purple-400/10"
+                        : "border-gray-700 hover:border-purple-400 bg-black/50"
+                    }`}
                   >
-                    {/* Added pointer-events-none here as well */}
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider pointer-events-none">
-                      Inject New Files
+                    {/* Dynamic text changes color and pulses when engaged */}
+                    <p
+                      className={`text-[10px] uppercase tracking-wider pointer-events-none transition-colors duration-300 ${
+                        imgDrag
+                          ? "text-purple-400 font-bold animate-pulse text-xs"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      {imgDrag ? "Drop to Inject Files" : "Inject New Files"}
                     </p>
+                    
                     <input
                       type="file"
                       id="imagesInput"
@@ -304,14 +391,13 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
                       alt="Existing"
                     />
 
-                    {/* FIX: Made the entire button cover the inset so the whole black box is clickable */}
                     <button
                       onClick={() =>
                         setExistingImages((prev) =>
                           prev.filter((_, i) => i !== idx),
                         )
                       }
-                      className="absolute inset-0 bg-black/10 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center !cursor-pointer text-red-500 hover:text-red hover:scale-125 font-black text-xl  z-10 w-full h-full"
+                      className="absolute inset-0 bg-black/10 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center !cursor-pointer text-red-500 hover:text-red hover:scale-125 font-black text-xl z-10 w-full h-full"
                     >
                       ✕
                     </button>
@@ -333,7 +419,6 @@ const ModifyProduct = ({ product, onClose, onUpdated }) => {
                       alt="New"
                     />
 
-                    {/* FIX: Same here. Full-width button, forced pointer. */}
                     <button
                       onClick={() =>
                         setEditImages((prev) =>
