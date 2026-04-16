@@ -5,7 +5,7 @@ This template provides a minimal setup to get React working in Vite with HMR and
 ## 🚀 Live Demo
 
 Explore the live version of the project:  
-👉 [The Treasury](https://thetreasury-orcin.vercel.app/)
+👉 <a href="https://thetreasury-orcin.vercel.app/" target="_blank">The Treasury</a>
 
 ---
 
